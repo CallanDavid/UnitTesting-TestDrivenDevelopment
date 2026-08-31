@@ -1,8 +1,7 @@
 ﻿using FluentAssertions;
-using System.Net.WebSockets;
 using Domain;
 
-namespace FlightTests
+namespace Domain.Tests
 {
     public class FlightSpecifications
     {
@@ -82,6 +81,44 @@ namespace FlightTests
             flight.Book(passengerEmail: "email@email.com", numberOfSeats: 1);
             var error = flight.CancelBooking(passengerEmail: "email@email.com", numberOfSeats: 1);
             error.Should().Be(null);
+        }
+
+        [Fact]
+        public void Cancelling_the_same_booking_twice_does_not_invent_seats()
+        {
+            //given
+            var flight = new Flight(seatCapacity: 3);
+            flight.Book(passengerEmail: "email@email.com", numberOfSeats: 2);
+
+            //when - the same booking is cancelled a second time
+            flight.CancelBooking(passengerEmail: "email@email.com", numberOfSeats: 2);
+            flight.CancelBooking(passengerEmail: "email@email.com", numberOfSeats: 2);
+
+            //then - the flight never exceeds the capacity it was built with
+            flight.RemainingNumberOfSeats.Should().Be(3);
+        }
+
+        [Fact]
+        public void Doesnt_cancel_more_seats_than_were_booked()
+        {
+            var flight = new Flight(seatCapacity: 10);
+            flight.Book(passengerEmail: "email@email.com", numberOfSeats: 2);
+
+            var error = flight.CancelBooking(passengerEmail: "email@email.com", numberOfSeats: 5);
+
+            error.Should().BeOfType<CannotCancelMoreSeatsThanBookedError>();
+            flight.RemainingNumberOfSeats.Should().Be(8);
+        }
+
+        [Fact]
+        public void Forgets_a_booking_once_it_is_fully_cancelled()
+        {
+            var flight = new Flight(seatCapacity: 3);
+            flight.Book(passengerEmail: "email@email.com", numberOfSeats: 2);
+
+            flight.CancelBooking(passengerEmail: "email@email.com", numberOfSeats: 2);
+
+            flight.BookingList.Should().BeEmpty();
         }
     }
 }

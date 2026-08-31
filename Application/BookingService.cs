@@ -1,4 +1,5 @@
 ﻿using Data;
+using Domain;
 
 namespace Application
 {
@@ -11,27 +12,52 @@ namespace Application
             Entities = entities;
         }
 
-        public void Book(BookDto bookDto)
+        public object? Book(BookDto bookDto)
         {
             var flight = Entities.Flights.Find(bookDto.FlightId);
-            flight.Book(bookDto.PassengerEmail, bookDto.NumberOfSeats);
+
+            if (flight is null)
+                return new FlightNotFoundError();
+
+            var error = flight.Book(bookDto.PassengerEmail, bookDto.NumberOfSeats);
+
+            //Nothing was booked, so there is nothing to persist.
+            if (error != null)
+                return error;
+
+            Entities.SaveChanges();
+            return null;
         }
 
         public IEnumerable<BookingRm> FindBookings(Guid flightId)
         {
-            return Entities.Flights.Find(flightId).BookingList.Select(booking => new BookingRm(booking.Email, booking.NumberOfSeats));
+            var flight = Entities.Flights.Find(flightId);
+
+            if (flight is null)
+                return Enumerable.Empty<BookingRm>();
+
+            return flight.BookingList.Select(booking => new BookingRm(booking.Email, booking.NumberOfSeats));
         }
 
-        public void CancelBooking(CancelBookingDto cancelbookingDto)
+        public object? CancelBooking(CancelBookingDto cancelbookingDto)
         {
             var flight = Entities.Flights.Find(cancelbookingDto.FlightId);
-            flight.CancelBooking(cancelbookingDto.PassengerEmail, cancelbookingDto.NumberOfSeats);
+
+            if (flight is null)
+                return new FlightNotFoundError();
+
+            var error = flight.CancelBooking(cancelbookingDto.PassengerEmail, cancelbookingDto.NumberOfSeats);
+
+            if (error != null)
+                return error;
+
             Entities.SaveChanges();
+            return null;
         }
 
-        public object? GetRemainingNumberOfSeatsFor(Guid flightId)
+        public int? GetRemainingNumberOfSeatsFor(Guid flightId)
         {
-            return Entities.Flights.Find(flightId).RemainingNumberOfSeats;
+            return Entities.Flights.Find(flightId)?.RemainingNumberOfSeats;
         }
     }
 }

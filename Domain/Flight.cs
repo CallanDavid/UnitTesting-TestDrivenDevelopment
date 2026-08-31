@@ -12,13 +12,14 @@ namespace Domain
 
         public int RemainingNumberOfSeats { get; set; }
 
-        public Guid Id { get; }
+        public Guid Id { get; private set; }
 
         [Obsolete("Needed by EF")]
         Flight() {}
 
         public Flight(int seatCapacity)
         {
+            Id = Guid.NewGuid();
             RemainingNumberOfSeats = seatCapacity;
         }
 
@@ -36,8 +37,20 @@ namespace Domain
 
         public object? CancelBooking(string passengerEmail, int numberOfSeats)
         {
-            if (!bookingList.Any(booking => booking.Email == passengerEmail))
+            var booking = bookingList.FirstOrDefault(booking => booking.Email == passengerEmail);
+
+            if (booking is null)
                 return new BookingNotFoundError();
+
+            //You cannot hand back more seats than you actually hold.
+            if (numberOfSeats > booking.NumberOfSeats)
+                return new CannotCancelMoreSeatsThanBookedError();
+
+            booking.NumberOfSeats -= numberOfSeats;
+
+            //A fully cancelled booking no longer exists.
+            if (booking.NumberOfSeats == 0)
+                bookingList.Remove(booking);
 
             RemainingNumberOfSeats += numberOfSeats;
             return null;

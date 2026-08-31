@@ -57,7 +57,7 @@ namespace Application.Tests
 
             //when
             bookingService.CancelBooking(
-                new CancelBookingDto(flightId: Guid.NewGuid(), passengerEmail: "email@email.com", numberOfSeats: 2)
+                new CancelBookingDto(flightId: flight.Id, passengerEmail: "email@email.com", numberOfSeats: 2)
                 );
 
             //then
